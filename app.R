@@ -346,7 +346,7 @@ server <- function(input, output, session) {
                labels=list(style=list(color="black",fontWeight="bold",fontSize="12px"))) %>%
       hc_yAxis(title=list(text=paste0("% ",tipo),style=list(color="black",fontWeight="bold")),
                gridLineWidth=1,labels=list(style=list(color="black"))) %>%
-      hc_add_series(name=tipo,showInLegend=FALSE,
+      hc_add_series(name=tipo, type="bar", showInLegend=FALSE,
         data=lapply(seq_len(nrow(data)),function(i) list(y=data$tasa[i],color=data$color[i])),
         dataLabels=list(enabled=TRUE,format="{point.y:.1f} %",
                         style=list(fontSize="11px",fontWeight="bold",textOutline="none",color="black"))
@@ -448,9 +448,13 @@ server <- function(input, output, session) {
       sdata <- df_all %>% filter(serie==s) %>% arrange(periodos)
       col_s <- COLORES_LINEAS[s]; if(is.na(col_s)) col_s <- "#607d8b"
       hc <- hc %>% hc_add_series(
-        name=s,
-        data=list_parse2(tibble(x=datetime_to_timestamp(sdata$periodos),y=round(sdata$val,2))),
-        color=col_s, marker=list(radius=2)
+        data       = sdata,
+        type       = "line",
+        hcaes(x    = periodos, y = val),
+        name       = s,
+        color      = col_s,
+        lineWidth  = 2,
+        marker     = list(enabled = TRUE, radius = 2)
       )
     }
     hc
@@ -465,7 +469,7 @@ server <- function(input, output, session) {
       hc_xAxis(categories=last_cats$cat_nombre,
                labels=list(style=list(color="black",fontWeight="bold"))) %>%
       hc_yAxis(title=list(text="% Mensual",style=list(color="black",fontWeight="bold")),gridLineWidth=0) %>%
-      hc_add_series(name="Mensual",showInLegend=FALSE,
+      hc_add_series(name="Mensual", type="column", showInLegend=FALSE,
         data=lapply(seq_len(nrow(last_cats)),function(i) list(y=round(last_cats$v_m[i],2),color=last_cats$color[i])),
         dataLabels=list(enabled=TRUE,format="{point.y:.1f} %",
                         style=list(fontSize="12px",textOutline="none",fontWeight="bold"))
@@ -485,7 +489,7 @@ server <- function(input, output, session) {
       hc_xAxis(categories=last_bys$bys_nombre,
                labels=list(style=list(color="black",fontWeight="bold",fontSize="13px"))) %>%
       hc_yAxis(title=list(text="% Mensual",style=list(color="black",fontWeight="bold")),gridLineWidth=0) %>%
-      hc_add_series(name="Mensual",showInLegend=FALSE,
+      hc_add_series(name="Mensual", type="column", showInLegend=FALSE,
         data=lapply(seq_len(nrow(last_bys)),function(i) list(y=round(last_bys$v_m[i],2),color=last_bys$color[i])),
         dataLabels=list(enabled=TRUE,format="{point.y:.1f} %",
                         style=list(fontSize="13px",textOutline="none",fontWeight="bold"))
@@ -500,6 +504,11 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui=ui, server=server)
+
+                                            
+    
+    
+    
 
                                             
     
