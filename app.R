@@ -337,26 +337,45 @@ server <- function(input, output, session) {
     data <- data %>%
       filter(!is.na(tasa)) %>%
       arrange(tasa) %>%
-      mutate(tasa=round(tasa,2),
-             color=viridis::mako(n(),begin=0.15,end=0.85,direction=1))
+      mutate(
+        tasa  = round(tasa, 2),
+        color = viridis::mako(n(), begin=0.15, end=0.85, direction=1),
+        sector = factor(sector, levels=sector)   # preservar orden
+      )
 
-    highchart() %>%
-      hc_chart(type="bar") %>%
-      hc_xAxis(categories=data$sector,
-               labels=list(style=list(color="black",fontWeight="bold",fontSize="12px"))) %>%
-      hc_yAxis(title=list(text=paste0("% ",tipo),style=list(color="black",fontWeight="bold")),
-               gridLineWidth=1,labels=list(style=list(color="black"))) %>%
-      hc_add_series(name=tipo, type="bar", showInLegend=FALSE,
-        data=lapply(seq_len(nrow(data)),function(i) list(y=data$tasa[i],color=data$color[i])),
-        dataLabels=list(enabled=TRUE,format="{point.y:.1f} %",
-                        style=list(fontSize="11px",fontWeight="bold",textOutline="none",color="black"))
+    hchart(data, "bar", hcaes(x=sector, y=tasa, color=color),
+           showInLegend = FALSE,
+           dataLabels = list(
+             enabled = TRUE,
+             format  = "{point.y:.1f} %",
+             style   = list(fontSize="11px", fontWeight="bold",
+                            textOutline="none", color="black")
+           )
+    ) %>%
+      hc_title(
+        text  = paste0("IPC ", tipo, " por Rubro"),
+        style = list(fontSize="15px", fontWeight="bold")
       ) %>%
-      hc_indec_theme() %>%
-      hc_title(text=paste0("IPC ",tipo," por Rubro"),style=list(fontSize="15px",fontWeight="bold")) %>%
-      hc_subtitle(text=paste0(traducir_mes(format(max(indec$periodos),"%B"))," de ",max(indec$year)),
-                  style=list(fontSize="11px",color="#555")) %>%
-      hc_tooltip(pointFormat=paste0(tipo,": <b>{point.y:.2f} %</b>")) %>%
-      hc_plotOptions(bar=list(borderRadius=3,groupPadding=0.05,pointPadding=0.05))
+      hc_subtitle(
+        text  = paste0(traducir_mes(format(max(indec$periodos),"%B")), " de ", max(indec$year)),
+        style = list(fontSize="11px", color="#555")
+      ) %>%
+      hc_xAxis(
+        labels = list(style=list(color="black", fontWeight="bold", fontSize="12px"))
+      ) %>%
+      hc_yAxis(
+        title       = list(text=paste0("% ",tipo), style=list(color="black", fontWeight="bold")),
+        gridLineWidth = 1,
+        labels      = list(style=list(color="black"))
+      ) %>%
+      hc_tooltip(pointFormat = paste0(tipo, ": <b>{point.y:.2f} %</b>")) %>%
+      hc_plotOptions(bar = list(borderRadius=3, groupPadding=0.05, pointPadding=0.05)) %>%
+      hc_credits(
+        enabled=TRUE, text="INDEC", href="https://www.indec.gob.ar/",
+        align="right", verticalAlign="bottom",
+        style=list(fontSize="10px", color="#555")
+      ) %>%
+      hc_legend(enabled=FALSE)
   })
 
   output$plot_catlineas <- renderHighchart({
@@ -504,6 +523,11 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui=ui, server=server)
+
+                                            
+    
+    
+    
 
                                             
     
