@@ -1,11 +1,16 @@
 library(shiny)
 library(bs4Dash)
-library(tidyverse)
 library(dplyr)
+library(tidyr)
+library(stringr)
 library(shinycssloaders)
 library(waiter)
 library(highcharter)
 library(viridis)
+
+cat("[STARTUP] All packages loaded OK\n")
+cat("[STARTUP] Working directory:", getwd(), "\n")
+cat("[STARTUP] Data file exists:", file.exists("data/serie_ipc_divisiones.csv"), "\n")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -570,3 +575,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
+    
