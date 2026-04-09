@@ -470,7 +470,7 @@ server <- function(input, output, session) {
       hc_tooltip(pointFormat = "Variación: <b>{point.y:.2f} %</b>")
   })
 
-  # ── Comparar todos los rubros ─────────────────────────────────────────────────
+  # -- Comparar todos los rubros
   output$plot_comparar <- renderHighchart({
     req(input$tipo_comparar)
 
@@ -482,15 +482,37 @@ server <- function(input, output, session) {
 
     data <- data %>%
       filter(!is.na(tasa)) %>%
-      arrange(desc(tasa))
+      arrange(desc(tasa)) %>%
+      mutate(
+        tasa  = round(tasa, 2),
+        color = viridis::mako(n(), begin = 0.15, end = 0.85, direction = -1)
+      )
 
-    n_sectors <- nrow(data)
-    colors    <- viridis::mako(n_sectors, direction = -1)
-
-    hchart(data, "column",
-           hcaes(x = sector, y = round(tasa, 2), color = colors),
-           showInLegend = FALSE,
-           dataLabels   = list(enabled = TRUE, format = "{point.y:.1f} %")) %>%
+    highchart() %>%
+      hc_chart(type = "column") %>%
+      hc_xAxis(
+        categories = data$sector,
+        labels = list(
+          rotation = -35,
+          style    = list(color = "black", fontWeight = "bold", fontSize = "11px")
+        )
+      ) %>%
+      hc_yAxis(
+        title         = list(text = paste0("% ", input$tipo_comparar),
+                             style = list(color = "black", fontWeight = "bold")),
+        gridLineWidth = 0,
+        labels        = list(style = list(color = "black"))
+      ) %>%
+      hc_add_series(
+        name         = input$tipo_comparar,
+        showInLegend = FALSE,
+        data         = lapply(seq_len(nrow(data)), function(i) {
+          list(y = data$tasa[i], color = data$color[i])
+        }),
+        dataLabels = list(enabled = TRUE,
+                          format  = "{point.y:.1f} %",
+                          style   = list(fontSize = "10px"))
+      ) %>%
       hc_indec_theme() %>%
       hc_title(
         text  = paste0("IPC ", input$tipo_comparar, " por Rubro"),
@@ -503,21 +525,11 @@ server <- function(input, output, session) {
         ),
         style = list(fontSize = "11px", color = "#555")
       ) %>%
-      hc_xAxis(
-        labels = list(
-          rotation = -35,
-          style    = list(color = "black", fontWeight = "bold", fontSize = "11px")
-        )
-      ) %>%
-      hc_yAxis(
-        title  = list(text = paste0("% ", input$tipo_comparar),
-                      style = list(color = "black", fontWeight = "bold")),
-        gridLineWidth = 0
-      ) %>%
       hc_tooltip(
         pointFormat = paste0(input$tipo_comparar, ": <b>{point.y:.2f} %</b>")
       )
   })
+
 
   # ── Value Boxes ───────────────────────────────────────────────────────────────
   output$vb_mensual <- renderbs4ValueBox({
@@ -576,4 +588,5 @@ server <- function(input, output, session) {
 
 shinyApp(ui = ui, server = server)
 
+    
     
