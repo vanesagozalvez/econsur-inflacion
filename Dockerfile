@@ -31,6 +31,7 @@ RUN R -e "install.packages('jsonlite', repos='https://cloud.r-project.org')"
 RUN R -e "install.packages('highcharter',    repos='https://cloud.r-project.org')"
 RUN R -e "install.packages('shinycssloaders',repos='https://cloud.r-project.org')"
 RUN R -e "install.packages('waiter',         repos='https://cloud.r-project.org')"
+RUN R -e "install.packages('lubridate', repos='https://cloud.r-project.org')"
 RUN R -e "install.packages('bs4Dash',        repos='https://cloud.r-project.org')"
 
 # Verify all packages load cleanly — build fails here if anything is broken
@@ -43,7 +44,7 @@ RUN R -e "\
   library(highcharter); \
   library(shinycssloaders); \
   library(waiter); \
-  library(viridis); \
+  library(viridis); library(lubridate); \
   cat('All packages OK\n') \
 "
 
@@ -58,4 +59,5 @@ COPY shiny-server.conf /etc/shiny-server/shiny-server.conf
 EXPOSE 3838
 
 CMD ["/usr/bin/shiny-server"]
+
 
