@@ -314,7 +314,7 @@ ui <- dashboardPage(
             selected = "Mensual",
             inline   = TRUE
           ),
-          withSpinner(highchartOutput("plot_comparar", height = "420px"), type = 4)
+          withSpinner(highchartOutput("plot_comparar", height = "520px"), type = 4)
         )
       ),
 
@@ -480,27 +480,27 @@ server <- function(input, output, session) {
       data_bar_interanual(indec, sector_cols)
     }
 
+    # Ordenar de menor a mayor para que el mayor quede arriba en barra horizontal
     data <- data %>%
       filter(!is.na(tasa)) %>%
-      arrange(desc(tasa)) %>%
+      arrange(tasa) %>%
       mutate(
         tasa  = round(tasa, 2),
-        color = viridis::mako(n(), begin = 0.15, end = 0.85, direction = -1)
+        color = viridis::mako(n(), begin = 0.15, end = 0.85, direction = 1)
       )
 
     highchart() %>%
-      hc_chart(type = "column") %>%
+      hc_chart(type = "bar") %>%
       hc_xAxis(
         categories = data$sector,
         labels = list(
-          rotation = -35,
-          style    = list(color = "black", fontWeight = "bold", fontSize = "11px")
+          style = list(color = "black", fontWeight = "bold", fontSize = "12px")
         )
       ) %>%
       hc_yAxis(
         title         = list(text = paste0("% ", input$tipo_comparar),
                              style = list(color = "black", fontWeight = "bold")),
-        gridLineWidth = 0,
+        gridLineWidth = 1,
         labels        = list(style = list(color = "black"))
       ) %>%
       hc_add_series(
@@ -509,9 +509,12 @@ server <- function(input, output, session) {
         data         = lapply(seq_len(nrow(data)), function(i) {
           list(y = data$tasa[i], color = data$color[i])
         }),
-        dataLabels = list(enabled = TRUE,
-                          format  = "{point.y:.1f} %",
-                          style   = list(fontSize = "10px"))
+        dataLabels = list(
+          enabled = TRUE,
+          format  = "{point.y:.1f} %",
+          style   = list(fontSize = "11px", fontWeight = "bold",
+                         textOutline = "none", color = "black")
+        )
       ) %>%
       hc_indec_theme() %>%
       hc_title(
@@ -527,8 +530,16 @@ server <- function(input, output, session) {
       ) %>%
       hc_tooltip(
         pointFormat = paste0(input$tipo_comparar, ": <b>{point.y:.2f} %</b>")
+      ) %>%
+      hc_plotOptions(
+        bar = list(
+          borderRadius = 3,
+          groupPadding = 0.05,
+          pointPadding = 0.05
+        )
       )
   })
+
 
 
   # ── Value Boxes ───────────────────────────────────────────────────────────────
@@ -588,5 +599,6 @@ server <- function(input, output, session) {
 
 shinyApp(ui = ui, server = server)
 
+    
     
     
