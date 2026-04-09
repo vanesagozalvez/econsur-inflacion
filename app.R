@@ -44,7 +44,8 @@ load_ipc <- function(path = "data/serie_ipc_divisiones.csv") {
   div <- base %>%
     filter(Region=="Nacional", Clasificador=="Nivel general y divisiones COICOP", !is.na(Descripcion)) %>%
     select(periodos,year,Mes,Descripcion,v_m) %>%
-    pivot_wider(names_from=Descripcion, values_from=v_m) %>%
+    pivot_wider(names_from=Descripcion, values_from=v_m,
+                values_fn=list(v_m=\(x) mean(x, na.rm=TRUE))) %>%
     arrange(periodos)
   colnames(div) <- limpiar_nombre(colnames(div))
 
@@ -75,8 +76,8 @@ cat("[STARTUP] Rows:", nrow(indec), "| Sectors:", length(sector_cols), "\n")
 cat("[STARTUP] Ultimo periodo:", as.character(max(indec$periodos)), "\n")
 
 interanual_rolling <- function(df, col) {
-  vals   <- as.numeric(pull(df[,col])) / 100 + 1
-  n      <- nrow(df)
+  vals   <- as.numeric(unlist(pull(df[,col]))) / 100 + 1
+  n      <- length(vals)
   result <- rep(NA_real_, n)
   for (i in 12:n) {
     w <- vals[(i-11):i]
@@ -86,9 +87,9 @@ interanual_rolling <- function(df, col) {
 }
 
 interanual_last_wide <- function(df, col) {
-  n <- nrow(df)
+  vals <- as.numeric(unlist(pull(df[,col]))) / 100 + 1
+  n <- length(vals)
   if (n < 12) return(NA_real_)
-  vals <- as.numeric(pull(df[,col])) / 100 + 1
   w <- vals[(n-11):n]
   if (any(is.na(w))) return(NA_real_)
   round((prod(w)-1)*100, 1)
@@ -96,7 +97,10 @@ interanual_last_wide <- function(df, col) {
 
 data_bar_mensual <- function(df, cols) {
   last_row <- df[nrow(df),]
-  tibble(sector=cols, tasa=sapply(cols, function(c) { v <- as.numeric(last_row[[c]]); if(is.na(v)) NA_real_ else v }))
+  tibble(sector=cols, tasa=sapply(cols, function(c) {
+    v <- as.numeric(unlist(last_row[[c]]))
+    if(length(v)==0 || all(is.na(v))) NA_real_ else v[1]
+  }))
 }
 
 data_bar_interanual_wide <- function(df, cols) {
@@ -358,20 +362,65 @@ server <- function(input, output, session) {
   output$plot_catlineas <- renderHighchart({
     metrica  <- input$metrica_cat
     rng      <- input$rng_catlineas
-    col_val  <- if(metrica=="Mensual") "v_m" else "v_ia"
 
+    # ── Nivel General ──────────────────────────────────────────────
     ng_vals <- if(metrica=="Mensual") {
-      as.numeric(indec[["NIVEL GENERAL"]])
+      as.numeric(unlist(indec[["NIVEL GENERAL"]]))
     } else {
       interanual_rolling(indec,"NIVEL GENERAL")
     }
     ng <- tibble(periodos=indec$periodos, serie="NIVEL GENERAL", val=ng_vals)
 
-    cats_prep <- cats %>% rename(serie=cat_nombre,val=all_of(col_val)) %>% select(periodos,serie,val)
-    bys_prep  <- bys  %>% rename(serie=bys_nombre,val=all_of(col_val)) %>% select(periodos,serie,val)
+    # ── Categorias (rolling interanual calculado desde v_m) ────────
+    if(metrica=="Mensual") {
+      cats_prep <- cats %>%
+        rename(serie=cat_nombre, val=v_m) %>%
+        select(periodos, serie, val)
+    } else {
+      cats_prep <- cats %>%
+        group_by(cat_nombre) %>%
+        arrange(periodos) %>%
+        mutate(val = {
+          fac <- v_m/100 + 1
+          n   <- n()
+          res <- rep(NA_real_, n)
+          for(i in 12:n){
+            w <- fac[(i-11):i]
+            if(!any(is.na(w))) res[i] <- round((prod(w)-1)*100, 2)
+          }
+          res
+        }) %>%
+        ungroup() %>%
+        rename(serie=cat_nombre) %>%
+        select(periodos, serie, val)
+    }
 
-    df_all <- bind_rows(cats_prep,bys_prep,ng) %>%
-      filter(!is.na(val),!is.na(periodos)) %>% arrange(periodos)
+    # ── Bienes y Servicios (rolling interanual calculado desde v_m) ─
+    if(metrica=="Mensual") {
+      bys_prep <- bys %>%
+        rename(serie=bys_nombre, val=v_m) %>%
+        select(periodos, serie, val)
+    } else {
+      bys_prep <- bys %>%
+        group_by(bys_nombre) %>%
+        arrange(periodos) %>%
+        mutate(val = {
+          fac <- v_m/100 + 1
+          n   <- n()
+          res <- rep(NA_real_, n)
+          for(i in 12:n){
+            w <- fac[(i-11):i]
+            if(!any(is.na(w))) res[i] <- round((prod(w)-1)*100, 2)
+          }
+          res
+        }) %>%
+        ungroup() %>%
+        rename(serie=bys_nombre) %>%
+        select(periodos, serie, val)
+    }
+
+    df_all <- bind_rows(cats_prep, bys_prep, ng) %>%
+      filter(!is.na(val), !is.na(periodos)) %>% arrange(periodos)
 
     max_p <- max(df_all$periodos)
     if(rng=="Ultimos 24 meses") df_all <- df_all %>% filter(periodos >= max_p %m-% months(24))
@@ -453,6 +502,10 @@ server <- function(input, output, session) {
 shinyApp(ui=ui, server=server)
 
                                             
+    
+    
+    
+                                          
     
     
     
